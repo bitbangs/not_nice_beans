@@ -1,5 +1,7 @@
-from beans import Grid, Bean, MovingBean
+from beans import Grid, Bean, MovingBean, SettledBeans
+from graph import Graph
 import pygame
+import sys #logging
 
 #initialize pygame and the window
 pygame.init()
@@ -11,10 +13,14 @@ quit = False
 grid = Grid((60, 60, width - 60, height - 60), (6, 10))
 grid.draw_grid_lines = True
 moving_bean00 = MovingBean()
+settled_beans = SettledBeans()
 
 while not quit:
     #spawn
     if moving_bean00.has_settled:
+        pivot_bean, spin_bean = moving_bean00.beans
+        #settled_beans.AddVertex(pivot_bean, spin_bean) #does not support drops
+        settled_beans.Settle(moving_bean00)
         moving_bean00 = MovingBean()
 
     #input
@@ -45,6 +51,11 @@ while not quit:
     pivot_bean, spin_bean = moving_bean00.beans
     pygame.draw.circle(screen, pivot_bean.color, grid.ToPixels(pivot_bean.coordinate), 10)
     pygame.draw.circle(screen, spin_bean.color, grid.ToPixels(spin_bean.coordinate), 10)
+    for coordinate, color in settled_beans.color_map.items():
+        pygame.draw.circle(screen, color, grid.ToPixels(coordinate), 10)
     pygame.display.flip()
+
+with open('settled_beans_graph', 'w') as graph_log:
+    graph_log.write(repr(settled_beans))
 
 pygame.quit()

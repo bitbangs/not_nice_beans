@@ -45,9 +45,6 @@ class Grid():
         if pivot_bean.has_settled and spin_bean.has_settled:
             moving_bean.has_settled = True
 
-    def MatchDetect(self):
-        return True
-
 bean_colors = [(120, 0, 0), (0, 120, 0), (0, 0, 120), (120, 0, 120)]
 class Bean():
     """one color"""
@@ -82,3 +79,54 @@ class MovingBean():
         pivot_bean, spin_bean = self.beans
         xx, yy = orientations[self.orientation]
         pivot_bean.coordinate = [pivot_bean.coordinate[0] + xx, pivot_bean.coordinate[1] + yy]
+
+class SettledBeans():
+    """any number of stationary beans"""
+    def __init__(self):
+        self.match_graph = Graph(None)
+        self.color_map = {}
+
+    def __repr__(self):
+        return 'SettledBeans(graph:%s)' % repr(self.match_graph)
+
+    def Settle(self, moving_bean):
+        pivot_bean, spin_bean = moving_bean.beans
+        pivot_settle_coordinate = (pivot_bean.coordinate[0], pivot_bean.coordinate[1])
+        pivot_settle_coordinate_w = (pivot_bean.coordinate[0] - 1, pivot_bean.coordinate[1])
+        pivot_settle_coordinate_s = (pivot_bean.coordinate[0], pivot_bean.coordinate[1] + 1)
+        pivot_settle_coordinate_e = (pivot_bean.coordinate[0] + 1, pivot_bean.coordinate[1])
+        neighbors = []
+        #use color_map to determine neighbors
+        if pivot_settle_coordinate_w in self.color_map:
+            if self.color_map[pivot_settle_coordinate_w] == pivot_bean.color:
+                neighbors.append(pivot_settle_coordinate_w)
+        if pivot_settle_coordinate_s in self.color_map:
+            if self.color_map[pivot_settle_coordinate_s] == pivot_bean.color:
+                neighbors.append(pivot_settle_coordinate_s)
+        if pivot_settle_coordinate_e in self.color_map:
+            if self.color_map[pivot_settle_coordinate_e] == pivot_bean.color:
+                neighbors.append(pivot_settle_coordinate_e)
+        self.match_graph.AddVertex(pivot_settle_coordinate, neighbors)
+        self.color_map[(pivot_bean.coordinate[0], pivot_bean.coordinate[1])] = pivot_bean.color
+
+        spin_settle_coordinate = (spin_bean.coordinate[0], spin_bean.coordinate[1])
+        spin_settle_coordinate_w = (spin_bean.coordinate[0] - 1, spin_bean.coordinate[1])
+        spin_settle_coordinate_s = (spin_bean.coordinate[0], spin_bean.coordinate[1] + 1)
+        spin_settle_coordinate_e = (spin_bean.coordinate[0] + 1, spin_bean.coordinate[1])
+        neighbors = []
+        #use color_map to determine neighbors
+        if spin_settle_coordinate_w in self.color_map:
+            if self.color_map[spin_settle_coordinate_w] == spin_bean.color:
+                neighbors.append(spin_settle_coordinate_w)
+        if spin_settle_coordinate_s in self.color_map:
+            if self.color_map[spin_settle_coordinate_s] == spin_bean.color:
+                neighbors.append(spin_settle_coordinate_s)
+        if spin_settle_coordinate_e in self.color_map:
+            if self.color_map[spin_settle_coordinate_e] == spin_bean.color:
+                neighbors.append(spin_settle_coordinate_e)
+        self.match_graph.AddVertex(spin_settle_coordinate, neighbors)
+        self.color_map[(spin_bean.coordinate[0], spin_bean.coordinate[1])] = spin_bean.color
+
+    def MatchDetect(self, moving_bean):
+        pivot_bean, spin_bean = moving_bean.beans
+        #self.match_graph.AddVertex(pivot_bean, spin_bean)
