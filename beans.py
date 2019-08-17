@@ -44,6 +44,8 @@ class Grid():
             self.settle_coordinates.append([spin_bean.coordinate[0], spin_bean.coordinate[1] - 1])
         if pivot_bean.has_settled and spin_bean.has_settled:
             moving_bean.has_settled = True
+            return True
+        return False
 
 bean_colors = [(120, 0, 0), (0, 120, 0), (0, 0, 120), (120, 0, 120)]
 class Bean():
@@ -96,23 +98,39 @@ class SettledBeans():
             settle_coordinate_s = (bean.coordinate[0], bean.coordinate[1] + 1)
             settle_coordinate_e = (bean.coordinate[0] + 1, bean.coordinate[1])
             neighbors = []
+
             #use color_map to determine neighbors
             if settle_coordinate_w in self.color_map:
-                if self.color_map[settle_coordinate_w] == bean.color:
-                    neighbors.append(settle_coordinate_w)
+                #if self.color_map[settle_coordinate_w] == bean.color:
+                neighbors.append(settle_coordinate_w)
             if settle_coordinate_s in self.color_map:
-                if self.color_map[settle_coordinate_s] == bean.color:
-                    neighbors.append(settle_coordinate_s)
+                #if self.color_map[settle_coordinate_s] == bean.color:
+                neighbors.append(settle_coordinate_s)
             if settle_coordinate_e in self.color_map:
-                if self.color_map[settle_coordinate_e] == bean.color:
-                    neighbors.append(settle_coordinate_e)
-            self.match_graph.AddVertex(settle_coordinate, neighbors)
+                #if self.color_map[settle_coordinate_e] == bean.color:
+                neighbors.append(settle_coordinate_e)
+            self.match_graph.AddVertex((settle_coordinate, bean.color), neighbors) #payload (color) in the tuple is wasteful
             self.color_map[settle_coordinate] = bean.color
 
         pivot_bean, spin_bean = moving_bean.beans
+        pivot_vertex = (pivot_bean.coordinate[0], pivot_bean.coordinate[1])
+        spin_vertex = (spin_bean.coordinate[0], spin_bean.coordinate[1])
+        self.match_graph.AddVertex((pivot_vertex, pivot_bean.color))
+        self.match_graph.AddVertex((spin_vertex, spin_bean.color), pivot_vertex)
+
         SettleBean(pivot_bean)
         SettleBean(spin_bean)
 
     def MatchDetect(self, moving_bean):
         pivot_bean, spin_bean = moving_bean.beans
-        #self.match_graph.AddVertex(pivot_bean, spin_bean)
+        def DetectMatches(bean):
+            if bean.has_settled:
+                connections = self.match_graph.BFS((bean.coordinate[0], bean.coordinate[1]), bean.color)
+                for coordinate in connections:
+                    if coordinate in self.color_map:
+                        del self.color_map[coordinate]
+                        self.match_graph.RemoveVertex(coordinate)
+                        #grid owns settle coords...how do we update those?
+        DetectMatches(pivot_bean)
+        if pivot_bean.color != spin_bean.color:
+            DetectMatches(spin_bean)

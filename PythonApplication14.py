@@ -16,11 +16,13 @@ moving_bean00 = MovingBean()
 settled_beans = SettledBeans()
 
 while not quit:
+    pygame.time.delay(100) #until more is going on this will be used to debounce the keyboard
+
     #spawn
     if moving_bean00.has_settled:
         pivot_bean, spin_bean = moving_bean00.beans
-        #settled_beans.AddVertex(pivot_bean, spin_bean) #does not support drops
         settled_beans.Settle(moving_bean00)
+        settled_beans.MatchDetect(moving_bean00)
         moving_bean00 = MovingBean()
 
     #input
@@ -39,9 +41,6 @@ while not quit:
 
     #land beans
     grid.SettleDetect(moving_bean00)
-    #grid.MatchDetect()
-
-    pygame.time.delay(60) #until more is going on
 
     #drawing
     screen.fill((50, 50, 50))
