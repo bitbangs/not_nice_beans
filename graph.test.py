@@ -3,11 +3,10 @@ import unittest
 from graph import Graph
 
 #let's write output to a file, not terminal
-class TestGraph(unittest.TestCase):
+class TestAddVertex(unittest.TestCase):
     def setUp(self):
         self.graph = Graph()
 
-    #AddVertex(...)
     def test_AddVertex_AddOne(self):
         self.graph.AddVertex((1, 'test'))
         self.assertEqual(1, len(self.graph.adj_list))
@@ -41,6 +40,10 @@ class TestGraph(unittest.TestCase):
         for ii in range(10):
             self.assertTrue(ii in self.graph.adj_list[11])
         self.assertEqual(10, len(self.graph.adj_list[11]))
+
+class TestRemoveVertex(unittest.TestCase):
+    def setUp(self):
+        self.graph = Graph()
 
     #RemoveVertex(...)
     def test_RemoveVertex_RemoveOne(self):

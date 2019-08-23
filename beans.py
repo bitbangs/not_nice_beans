@@ -4,7 +4,7 @@ from graph import Graph
 
 logger = logging.getLogger(__name__)
 
-class Grid():
+class Grid:
     def __init__(self, pix_box, grid_size):
         self.xx_offset, self.yy_offset, self.xx_max, self.yy_max = pix_box
         self.grid_width, self.grid_height = grid_size
@@ -33,18 +33,31 @@ class Grid():
         return (xx, yy)
 
 bean_colors = [(120, 0, 0), (0, 120, 0), (0, 0, 120), (120, 0, 120)]
-class Bean():
+class Bean:
     """one color"""
     def __init__(self, coordinate):
-        self.color = bean_colors[random.randint(0, len(bean_colors) - 1)]
+        self.color = bean_colors[random.randint(0, len(bean_colors) - 1)] #bubble up to remove diff between droppingbean
         self.coordinate = coordinate
         self.has_settled = False
 
     def __repr__(self):
         return 'Bean(coordinate:%s, color:%s, settled:%s)' % (self.coordinate, self.color, self.has_settled)
 
+class DroppingBean(Bean):
+    """a bean which is out of user control"""
+    def __init__(self, color, coordinate):
+        self.color = color
+        self.coordinate = coordinate
+        self.has_settled = False
+
+    def __repr__(self):
+        return 'DroppingBean(coordinate:%s, color:%s)' % (self.coordinate, self.color)
+
+    def Move(self):
+        self.coordinate = (self.coordinate[0], self.coordinate[1] + 1)
+
 orientations = [(-1, -1), (-1, +1), (+1, +1), (+1, -1)]
-class MovingBean():
+class MovingBean:
     """two beans and their orientation"""
     def __init__(self):
         self.beans = Bean([2, 0]), Bean([2, 1]) #improve to named tuple
@@ -68,7 +81,7 @@ class MovingBean():
         xx, yy = orientations[self.orientation]
         pivot_bean.coordinate = [pivot_bean.coordinate[0] + xx, pivot_bean.coordinate[1] + yy]
 
-class SettledBeans():
+class SettledBeans:
     """any number of stationary beans"""
     def __init__(self, grid_width, grid_height):
         self.match_graph = Graph()
@@ -100,32 +113,32 @@ class SettledBeans():
 
         return False
 
-    def Settle(self, moving_bean):
-        def SettleBean(bean):
-            settle_coordinate = (bean.coordinate[0], bean.coordinate[1])
-            settle_coordinate_w = (bean.coordinate[0] - 1, bean.coordinate[1])
-            settle_coordinate_s = (bean.coordinate[0], bean.coordinate[1] + 1)
-            settle_coordinate_e = (bean.coordinate[0] + 1, bean.coordinate[1])
-            neighbors = []
+    def SettleBean(self, bean):
+        settle_coordinate = (bean.coordinate[0], bean.coordinate[1])
+        settle_coordinate_w = (bean.coordinate[0] - 1, bean.coordinate[1])
+        settle_coordinate_s = (bean.coordinate[0], bean.coordinate[1] + 1)
+        settle_coordinate_e = (bean.coordinate[0] + 1, bean.coordinate[1])
+        neighbors = []
 
-            if settle_coordinate_w in self.color_map:
-                neighbors.append(settle_coordinate_w)
-            if settle_coordinate_s in self.color_map:
-                neighbors.append(settle_coordinate_s)
-            if settle_coordinate_e in self.color_map:
-                neighbors.append(settle_coordinate_e)
-            self.match_graph.AddVertex((settle_coordinate, bean.color), neighbors)
-            logger.info('adds to settled color map->%s:%s', settle_coordinate, bean.color)
-            self.color_map[settle_coordinate] = bean.color
+        if settle_coordinate_w in self.color_map:
+            neighbors.append(settle_coordinate_w)
+        if settle_coordinate_s in self.color_map:
+            neighbors.append(settle_coordinate_s)
+        if settle_coordinate_e in self.color_map:
+            neighbors.append(settle_coordinate_e)
+        self.match_graph.AddVertex((settle_coordinate, bean.color), neighbors)
+        logger.info('adds to settled color map->%s:%s', settle_coordinate, bean.color)
+        self.color_map[settle_coordinate] = bean.color
 
+    def SettleMovingBean(self, moving_bean):
         pivot_bean, spin_bean = moving_bean.beans
         pivot_vertex = (pivot_bean.coordinate[0], pivot_bean.coordinate[1])
         spin_vertex = (spin_bean.coordinate[0], spin_bean.coordinate[1])
         self.match_graph.AddVertex((pivot_vertex, pivot_bean.color))
         self.match_graph.AddVertex((spin_vertex, spin_bean.color), pivot_vertex)
 
-        SettleBean(pivot_bean)
-        SettleBean(spin_bean)
+        self.SettleBean(pivot_bean)
+        self.SettleBean(spin_bean)
 
         self.column_heights[pivot_bean.coordinate[0]] = self.column_heights[pivot_bean.coordinate[0]] + 1
         self.column_heights[spin_bean.coordinate[0]] = self.column_heights[spin_bean.coordinate[0]] + 1
@@ -163,6 +176,8 @@ class SettledBeans():
     def FloatDetect(self):
         for coordinate, connections in self.match_graph.adj_list.items():
             south = (coordinate[0], coordinate[1] + 1)
-            if south not in connections:
+            if coordinate in self.color_map and south not in connections:
                 logger.info('drops %s:%s', coordinate, self.color_map[coordinate])
-                #need create a dropping bean
+                drop_bean = DroppingBean(self.color_map[coordinate], coordinate)
+                del self.color_map[coordinate]
+                return drop_bean
