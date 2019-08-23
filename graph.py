@@ -4,7 +4,6 @@ import logging
 logger = logging.getLogger(__name__)
 class Graph():
     """undirected graph"""
-
     def __init__(self):
         self.adj_list = {}
         self.payloads = {}
@@ -19,13 +18,15 @@ class Graph():
             self.adj_list[vertex] = set()
         if isinstance(connect_to, list):
             for existing_vert in connect_to:
-                self.adj_list[existing_vert].add(vertex)
-                self.adj_list[vertex].add(existing_vert)
+                if vertex != existing_vert:
+                    self.adj_list[existing_vert].add(vertex)
+                    self.adj_list[vertex].add(existing_vert)
         elif connect_to is not None:
-            self.adj_list[vertex].add(connect_to)
-            self.adj_list[connect_to].add(vertex)
-        if vertex not in self.payloads:
-            self.payloads[vertex] = payload
+            if vertex != connect_to:
+                self.adj_list[vertex].add(connect_to)
+                self.adj_list[connect_to].add(vertex)
+        if vertex not in self.payloads: #seems redundant but prevents changing payload by readding a vertex to itself with a different payload
+            self.payloads[vertex] = payload #is this good, bad, dc?
         logger.info('adds vertex %s', vertex)
 
     def RemoveVertex(self, victim_vert):
