@@ -140,10 +140,15 @@ class SettledBeans():
                     for coordinate in connections:
                         if coordinate in self.color_map:
                             logger.info('deletes from settled color map->%s:%s', coordinate, self.color_map[coordinate])
+                            drop_color = self.color_map[coordinate] #may not be needed, but could also spawn drops from here
+                            #explore problem when we drop bean of same color
                             del self.color_map[coordinate]
                             self.match_graph.RemoveVertex(coordinate)
-                            #reduce settle height
+                            #reduce settle height and create drop bean
                             self.column_heights[coordinate[0]] = self.column_heights[coordinate[0]] - 1
+                            north_coordinate = (coordinate[0], coordinate[1] - 1)
+                            if north_coordinate in self.color_map and drop_color != self.color_map[north_coordinate]: #what happens when the lookup fails? can we jsut get(north_coord)?
+                                logger.info('dropbean spawned because %s:%s is north of %s in color map', north_coordinate, coordinate, drop_color)
                     return True
             return False
 
