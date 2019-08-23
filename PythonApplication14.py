@@ -20,21 +20,26 @@ grid = Grid((60, 60, width - 60, height - 60), (6, 10))
 grid.draw_grid_lines = True
 moving_bean00 = MovingBean()
 settled_beans = SettledBeans(grid.grid_width, grid.grid_height)
+dropping_beans = []
 
 while not quit:
     pygame.time.delay(100) #until more is going on this will be used to debounce the keyboard
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            quit = True
 
     #settle and match beans
     if moving_bean00.has_settled:
         settled_beans.SettleMovingBean(moving_bean00)
         if settled_beans.MatchDetect(moving_bean00):
-            settled_beans.FloatDetect()
+            dropping_beans = settled_beans.FloatDetect() #reassign this array or modify it?
         moving_bean00 = MovingBean()
+    for bean in dropping_beans:
+        if bean.has_settled:
+            settled_beans.SettleBean(bean)
+            #if modifying dropping_beans, this is where we remove
 
-    #input
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            quit = True
+    #move beans
     keys = pygame.key.get_pressed()
     if keys[pygame.K_w]:
         moving_bean00.Spin()
@@ -44,9 +49,13 @@ while not quit:
         moving_bean00.Move([0, +1])
     elif keys[pygame.K_d]:
         moving_bean00.Move([+1, 0])
+    for bean in dropping_beans:
+        bean.Move()
 
     #settle detection after mvmt
-    settled_beans.SettleDetect(moving_bean00)
+    settled_beans.SettleDetectMoving(moving_bean00)
+    for bean in dropping_beans:
+        settled_beans.SettleDetect(bean)
 
     #drawing
     screen.fill((50, 50, 50))

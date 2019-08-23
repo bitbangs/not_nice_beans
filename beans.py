@@ -93,11 +93,21 @@ class SettledBeans:
         return 'SettledBeans(graph:%s)' % repr(self.match_graph)
 
     #bean settling
-    def SettleDetect(self, moving_bean):
-        settle_coordinates = []
+    def GenSettleCoords(self):
+        settle_coordinates = [] #refactor this because it is repeated in settledetectmoving
         for xx in range(0, len(self.column_heights)):
             settle_coordinates.append([xx, self.max_height - self.column_heights[xx] - 1])
+        return settle_coordinates
 
+    def SettleDetect(self, bean):
+        settle_coordinates = self.GenSettleCoords()
+        if settle_coordinates.count(bean.coordinate):
+            bean.has_settled = True
+            return True
+        return False
+
+    def SettleDetectMoving(self, moving_bean):
+        settle_coordinates = self.GenSettleCoords()
         pivot_bean, spin_bean = moving_bean.beans
         if settle_coordinates.count(pivot_bean.coordinate):
             pivot_bean.has_settled = True
@@ -110,7 +120,6 @@ class SettledBeans:
             moving_bean.has_settled = True
             logger.info('settle detect returns true: %s', moving_bean.beans)
             return True
-
         return False
 
     def SettleBean(self, bean):
@@ -174,10 +183,13 @@ class SettledBeans:
         return matched
 
     def FloatDetect(self):
+        dropping_beans = []
         for coordinate, connections in self.match_graph.adj_list.items():
-            south = (coordinate[0], coordinate[1] + 1)
-            if coordinate in self.color_map and south not in connections:
-                logger.info('drops %s:%s', coordinate, self.color_map[coordinate])
-                drop_bean = DroppingBean(self.color_map[coordinate], coordinate)
-                del self.color_map[coordinate]
-                return drop_bean
+            if coordinate[1] + 1 < self.max_height:
+                south = (coordinate[0], coordinate[1] + 1)
+                if coordinate in self.color_map and south not in connections:
+                    logger.info('drops %s:%s', coordinate, self.color_map[coordinate])
+                    drop_bean = DroppingBean(self.color_map[coordinate], coordinate)
+                    del self.color_map[coordinate]
+                    dropping_beans.append(drop_bean)
+        return dropping_beans
