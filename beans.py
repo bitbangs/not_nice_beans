@@ -115,6 +115,7 @@ class SettledBeans():
             if settle_coordinate_e in self.color_map:
                 neighbors.append(settle_coordinate_e)
             self.match_graph.AddVertex((settle_coordinate, bean.color), neighbors)
+            logger.info('adds to settled color map->%s:%s', settle_coordinate, bean.color)
             self.color_map[settle_coordinate] = bean.color
 
         pivot_bean, spin_bean = moving_bean.beans
@@ -135,14 +136,14 @@ class SettledBeans():
             if bean.has_settled:
                 connections = self.match_graph.BFS((bean.coordinate[0], bean.coordinate[1]), bean.color)
                 logging.info('match detect bfs on bean %s has these color-matched connections: %s', bean, connections)
-                if len(connections) > 4:
+                if len(connections) > 3:
                     for coordinate in connections:
                         if coordinate in self.color_map:
-                            logging.info('removing %s', self.color_map[coordinate])
+                            logging.info('deletes from settled color map->%s:%s', coordinate, self.color_map[coordinate])
                             del self.color_map[coordinate]
                             self.column_heights[coordinate[0]] = self.column_heights[coordinate[0]] - 1
                             self.match_graph.RemoveVertex(coordinate)
-                        return True
+                    return True
             return False
 
         pivot_bean, spin_bean = moving_bean.beans
