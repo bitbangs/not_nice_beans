@@ -49,9 +49,35 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(0, len(self.graph.adj_list))
         self.assertEqual(0, len(self.graph.payloads))
 
+    def test_RemoveVertex_RemoveDoesNotExist(self):
+        self.graph.AddVertex((1, 'test'))
+        self.graph.RemoveVertex(2)
+        self.assertEqual(1, len(self.graph.adj_list))
+        self.assertEqual(1, len(self.graph.payloads))
+
     def test_RemoveVertex_RemoveTwoUnconnected(self):
         self.graph.AddVertex((1, 'test'))
+        self.graph.AddVertex((2, 'test'))
         self.graph.RemoveVertex(1)
+        self.graph.RemoveVertex(2)
+        self.assertEqual(0, len(self.graph.adj_list))
+        self.assertEqual(0, len(self.graph.payloads))
+
+    def test_RemoveVertex_RemoveTwoConnected(self):
+        self.graph.AddVertex((1, 'test'))
+        self.graph.AddVertex((2, 'test'), 1)
+        self.graph.RemoveVertex(1)
+        self.graph.RemoveVertex(2)
+        self.assertEqual(0, len(self.graph.adj_list))
+        self.assertEqual(0, len(self.graph.payloads))
+
+    def test_RemoveVertex_RemoveTwoConnectedStackOrder(self):
+        self.graph.AddVertex((1, 'test'))
+        self.graph.AddVertex((2, 'test'), 1)
+        self.graph.RemoveVertex(2)
+        self.graph.RemoveVertex(1)
+        self.assertEqual(0, len(self.graph.adj_list))
+        self.assertEqual(0, len(self.graph.payloads))
 
 #allows us to run just this set of tests but also run these tests from elsewhere
 if __name__ == '__main__':

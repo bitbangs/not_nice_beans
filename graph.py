@@ -30,11 +30,12 @@ class Graph():
         logger.info('adds vertex %s', vertex)
 
     def RemoveVertex(self, victim_vert):
-        del self.adj_list[victim_vert]
-        for vert, adj in self.adj_list.items():
-            adj.discard(victim_vert)
-        del self.payloads[victim_vert]
-        logger.info('removes vertex %s', victim_vert)
+        if victim_vert in self.adj_list:
+            del self.adj_list[victim_vert]
+            for vert, adj in self.adj_list.items():
+                adj.discard(victim_vert)
+            del self.payloads[victim_vert]
+            logger.info('removes vertex %s', victim_vert)
 
     def BFS(self, start_vert, payload_match):
         level = {start_vert: 0}
