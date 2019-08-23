@@ -5,9 +5,9 @@ logger = logging.getLogger(__name__)
 class Graph():
     """undirected graph"""
 
-    def __init__(self, root):
-        self.adj_list = {root:set()}
-        self.payloads = {root:None}
+    def __init__(self):
+        self.adj_list = {}
+        self.payloads = {}
 
     def __repr__(self):
         return 'undirected graph w/ following adjacent list\n\t(%s)\nand payloads\n\t%s' % (self.adj_list, self.payloads)

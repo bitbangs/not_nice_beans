@@ -27,9 +27,8 @@ while not quit:
     #settle and match beans
     if moving_bean00.has_settled:
         settled_beans.Settle(moving_bean00)
-        settled_beans.MatchDetect(moving_bean00)
-        #if settled_beans.MatchDetect(moving_bean00):
-            #settled_beans.FallDetect()
+        if settled_beans.MatchDetect(moving_bean00):
+            settled_beans.FloatDetect()
         moving_bean00 = MovingBean()
 
     #input

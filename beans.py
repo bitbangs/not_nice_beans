@@ -71,7 +71,7 @@ class MovingBean():
 class SettledBeans():
     """any number of stationary beans"""
     def __init__(self, grid_width, grid_height):
-        self.match_graph = Graph(None)
+        self.match_graph = Graph()
         self.color_map = {}
         self.column_heights = [0] * grid_width
         self.max_height = grid_height
@@ -135,14 +135,15 @@ class SettledBeans():
         def DetectMatches(bean):
             if bean.has_settled:
                 connections = self.match_graph.BFS((bean.coordinate[0], bean.coordinate[1]), bean.color)
-                logging.info('match detect bfs on bean %s has these color-matched connections: %s', bean, connections)
+                logger.info('match detect bfs on bean %s has these color-matched connections: %s', bean, connections)
                 if len(connections) > 3:
                     for coordinate in connections:
                         if coordinate in self.color_map:
-                            logging.info('deletes from settled color map->%s:%s', coordinate, self.color_map[coordinate])
+                            logger.info('deletes from settled color map->%s:%s', coordinate, self.color_map[coordinate])
                             del self.color_map[coordinate]
-                            self.column_heights[coordinate[0]] = self.column_heights[coordinate[0]] - 1
                             self.match_graph.RemoveVertex(coordinate)
+                            #reduce settle height
+                            self.column_heights[coordinate[0]] = self.column_heights[coordinate[0]] - 1
                     return True
             return False
 
@@ -154,16 +155,9 @@ class SettledBeans():
 
         return matched
 
-    #beans fall when matches remove beans under them
-    #def FallDetect(self):
-        """resolves floating beans caused by successful match"""
-        #how do I get a floor been?  there isn't always one?
-        #@@@
-        #for vertex, adjacencies in self.match_graph.items(): #bfs from and floor so we get the lower hangers first
-            #if vertex[1] + 1 < self.max_height and (vertex[0], vertex[1] + 1) not in adjacencies: #does everyone have a southern neighbor?
-                #self.match_graph.RemoveVertex(vertex) #drop bean. so what does this mean to translate vertex to bean?
-                #new_coordinate = (vertex[0], self.column_heights[vertex[0]])
-                #self.match_graph.AddVertex(new_coordinate, self.color_map[vertex]) #move the vertex with payload to new location
-                #del self.color_map[vertex] #delete from map
-                #self.color_map[new_coordinate] = self.color_map[vertex] #keep the color
-                #self.column_heights[vertex[0]] = self.column_heights[vertex[0]] + 1
+    def FloatDetect(self):
+        for coordinate, connections in self.match_graph.adj_list.items():
+            south = (coordinate[0], coordinate[1] + 1)
+            if south not in connections:
+                logger.info('drops %s:%s', coordinate, self.color_map[coordinate])
+                #need create a dropping bean
