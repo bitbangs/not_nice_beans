@@ -1,4 +1,7 @@
+import logging
+
 #review use of for in dicts
+logger = logging.getLogger(__name__)
 class Graph():
     """undirected graph"""
 
@@ -25,6 +28,7 @@ class Graph():
             self.payloads[vertex] = payload
 
     def RemoveVertex(self, victim_vert):
+        logger.info('removing vertex %s', victim_vert)
         del self.adj_list[victim_vert]
         for vert, adj in self.adj_list.items():
             adj.discard(victim_vert)
@@ -46,9 +50,7 @@ class Graph():
                             next.add(vv)
             frontier = next
             ii += 1
-        if ii > 4:
-            return parent
-        return {}
+        return parent
 
     def DFSVisit(self, start_vert, breadcrumbs):
         for vv in self.adj_list[start_vert]:

@@ -1,5 +1,8 @@
-from graph import Graph
+import logging
 import random
+from graph import Graph
+
+logger = logging.getLogger(__name__)
 
 class Grid():
     def __init__(self, pix_box, grid_size):
@@ -12,9 +15,6 @@ class Grid():
             self.grid_lines.append(((self.xx_offset, self.yy_offset + (yy * self.cell_height)),(self.xx_max, self.yy_offset + (yy * self.cell_height))))
         for xx in range(0, self.grid_width):
             self.grid_lines.append(((self.xx_offset + (xx * self.cell_width), self.yy_offset),((self.xx_offset + (xx * self.cell_width), self.yy_max))))
-        self.settle_coordinates = []
-        for xx in range(0, self.grid_width):
-            self.settle_coordinates.append([xx, self.grid_height - 1])
 
     def __repr__(self):
         return 'Grid(scale:%s, offset:%s)' % (self.scale, self.offset)
@@ -32,21 +32,6 @@ class Grid():
         yy = int((yy - 0)/(self.grid_height) * (self.yy_max - self.yy_offset) + self.yy_offset + (self.cell_height / 2))
         return (xx, yy)
 
-    def SettleDetect(self, moving_bean):
-        pivot_bean, spin_bean = moving_bean.beans
-        if self.settle_coordinates.count(pivot_bean.coordinate):
-            pivot_bean.has_settled = True
-            self.settle_coordinates.remove(pivot_bean.coordinate)
-            self.settle_coordinates.append([pivot_bean.coordinate[0], pivot_bean.coordinate[1] - 1])
-        if self.settle_coordinates.count(spin_bean.coordinate):
-            spin_bean.has_settled = True
-            self.settle_coordinates.remove(spin_bean.coordinate)
-            self.settle_coordinates.append([spin_bean.coordinate[0], spin_bean.coordinate[1] - 1])
-        if pivot_bean.has_settled and spin_bean.has_settled:
-            moving_bean.has_settled = True
-            return True
-        return False
-
 bean_colors = [(120, 0, 0), (0, 120, 0), (0, 0, 120), (120, 0, 120)]
 class Bean():
     """one color"""
@@ -56,7 +41,7 @@ class Bean():
         self.has_settled = False
 
     def __repr__(self):
-        return 'Bean(coordinate:%s)' % (self.coordinate)
+        return 'Bean(coordinate:%s, color:%s, settled:%s)' % (self.coordinate, self.color, self.has_settled)
 
 orientations = [(-1, -1), (-1, +1), (+1, +1), (+1, -1)]
 class MovingBean():
@@ -65,6 +50,7 @@ class MovingBean():
         self.beans = Bean([2, 0]), Bean([2, 1]) #improve to named tuple
         self.orientation = 0
         self.has_settled = False
+        logger.info('created moving bean pair %s', self.beans)
 
     def __repr__(self):
         return 'MovingBean(beans:%s, orientation:%s)' % (repr(self.beans), self.orientation)
@@ -84,12 +70,35 @@ class MovingBean():
 
 class SettledBeans():
     """any number of stationary beans"""
-    def __init__(self):
+    def __init__(self, grid_width, grid_height):
         self.match_graph = Graph(None)
         self.color_map = {}
+        self.column_heights = [0] * grid_width
+        self.max_height = grid_height
 
     def __repr__(self):
         return 'SettledBeans(graph:%s)' % repr(self.match_graph)
+
+    #bean settling
+    def SettleDetect(self, moving_bean):
+        settle_coordinates = []
+        for xx in range(0, len(self.column_heights)):
+            settle_coordinates.append([xx, self.max_height - self.column_heights[xx] - 1])
+
+        pivot_bean, spin_bean = moving_bean.beans
+        if settle_coordinates.count(pivot_bean.coordinate):
+            pivot_bean.has_settled = True
+        if settle_coordinates.count(spin_bean.coordinate):
+            spin_bean.has_settled = True
+
+        if pivot_bean.has_settled or spin_bean.has_settled:
+            pivot_bean.has_settled = True #do we want this? think of drops as possibly just being gravity driven...
+            spin_bean.has_settled = True #do we want this? comment above^
+            moving_bean.has_settled = True
+            logger.info('settle detect returns true: %s', moving_bean.beans)
+            return True
+
+        return False
 
     def Settle(self, moving_bean):
         def SettleBean(bean):
@@ -99,17 +108,13 @@ class SettledBeans():
             settle_coordinate_e = (bean.coordinate[0] + 1, bean.coordinate[1])
             neighbors = []
 
-            #use color_map to determine neighbors
             if settle_coordinate_w in self.color_map:
-                #if self.color_map[settle_coordinate_w] == bean.color:
                 neighbors.append(settle_coordinate_w)
             if settle_coordinate_s in self.color_map:
-                #if self.color_map[settle_coordinate_s] == bean.color:
                 neighbors.append(settle_coordinate_s)
             if settle_coordinate_e in self.color_map:
-                #if self.color_map[settle_coordinate_e] == bean.color:
                 neighbors.append(settle_coordinate_e)
-            self.match_graph.AddVertex((settle_coordinate, bean.color), neighbors) #payload (color) in the tuple is wasteful
+            self.match_graph.AddVertex((settle_coordinate, bean.color), neighbors)
             self.color_map[settle_coordinate] = bean.color
 
         pivot_bean, spin_bean = moving_bean.beans
@@ -121,16 +126,43 @@ class SettledBeans():
         SettleBean(pivot_bean)
         SettleBean(spin_bean)
 
+        self.column_heights[pivot_bean.coordinate[0]] = self.column_heights[pivot_bean.coordinate[0]] + 1
+        self.column_heights[spin_bean.coordinate[0]] = self.column_heights[spin_bean.coordinate[0]] + 1
+
+    #bean matching
     def MatchDetect(self, moving_bean):
-        pivot_bean, spin_bean = moving_bean.beans
         def DetectMatches(bean):
             if bean.has_settled:
                 connections = self.match_graph.BFS((bean.coordinate[0], bean.coordinate[1]), bean.color)
-                for coordinate in connections:
-                    if coordinate in self.color_map:
-                        del self.color_map[coordinate]
-                        self.match_graph.RemoveVertex(coordinate)
-                        #grid owns settle coords...how do we update those?
-        DetectMatches(pivot_bean)
+                logging.info('match detect bfs on bean %s has these color-matched connections: %s', bean, connections)
+                if len(connections) > 4:
+                    for coordinate in connections:
+                        if coordinate in self.color_map:
+                            logging.info('removing %s', self.color_map[coordinate])
+                            del self.color_map[coordinate]
+                            self.column_heights[coordinate[0]] = self.column_heights[coordinate[0]] - 1
+                            self.match_graph.RemoveVertex(coordinate)
+                        return True
+            return False
+
+        pivot_bean, spin_bean = moving_bean.beans
+        matched = False
+        matched = DetectMatches(pivot_bean)
         if pivot_bean.color != spin_bean.color:
-            DetectMatches(spin_bean)
+            matched = matched or DetectMatches(spin_bean)
+
+        return matched
+
+    #beans fall when matches remove beans under them
+    #def FallDetect(self):
+        """resolves floating beans caused by successful match"""
+        #how do I get a floor been?  there isn't always one?
+        #@@@
+        #for vertex, adjacencies in self.match_graph.items(): #bfs from and floor so we get the lower hangers first
+            #if vertex[1] + 1 < self.max_height and (vertex[0], vertex[1] + 1) not in adjacencies: #does everyone have a southern neighbor?
+                #self.match_graph.RemoveVertex(vertex) #drop bean. so what does this mean to translate vertex to bean?
+                #new_coordinate = (vertex[0], self.column_heights[vertex[0]])
+                #self.match_graph.AddVertex(new_coordinate, self.color_map[vertex]) #move the vertex with payload to new location
+                #del self.color_map[vertex] #delete from map
+                #self.color_map[new_coordinate] = self.color_map[vertex] #keep the color
+                #self.column_heights[vertex[0]] = self.column_heights[vertex[0]] + 1

@@ -1,7 +1,13 @@
-from beans import Grid, Bean, MovingBean, SettledBeans
-from graph import Graph
+import logging
 import pygame
-import sys #logging
+from beans import Grid, Bean, MovingBean, SettledBeans
+
+#need to create unit test scripts
+#need to create ability to have scripted runs
+
+#initialize logger
+log_format = '%(levelname)s|%(asctime)s|%(module)s|%(funcName)s|%(lineno)d|%(message)s'
+logging.basicConfig(filename='not_nice_beans.log', filemode='w', format=log_format, level=logging.DEBUG)
 
 #initialize pygame and the window
 pygame.init()
@@ -13,16 +19,17 @@ quit = False
 grid = Grid((60, 60, width - 60, height - 60), (6, 10))
 grid.draw_grid_lines = True
 moving_bean00 = MovingBean()
-settled_beans = SettledBeans()
+settled_beans = SettledBeans(grid.grid_width, grid.grid_height)
 
 while not quit:
     pygame.time.delay(100) #until more is going on this will be used to debounce the keyboard
 
-    #spawn
+    #settle and match beans
     if moving_bean00.has_settled:
-        pivot_bean, spin_bean = moving_bean00.beans
         settled_beans.Settle(moving_bean00)
         settled_beans.MatchDetect(moving_bean00)
+        #if settled_beans.MatchDetect(moving_bean00):
+            #settled_beans.FallDetect()
         moving_bean00 = MovingBean()
 
     #input
@@ -39,8 +46,8 @@ while not quit:
     elif keys[pygame.K_d]:
         moving_bean00.Move([+1, 0])
 
-    #land beans
-    grid.SettleDetect(moving_bean00)
+    #settle detection after mvmt
+    settled_beans.SettleDetect(moving_bean00)
 
     #drawing
     screen.fill((50, 50, 50))
@@ -53,8 +60,5 @@ while not quit:
     for coordinate, color in settled_beans.color_map.items():
         pygame.draw.circle(screen, color, grid.ToPixels(coordinate), 10)
     pygame.display.flip()
-
-with open('settled_beans_graph', 'w') as graph_log:
-    graph_log.write(repr(settled_beans))
 
 pygame.quit()
